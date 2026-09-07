@@ -88,6 +88,11 @@ export async function generateDraft({ template, inquiry, note }) {
   return { result: requireParsed(message, "下書き生成"), usage: usageOf(message) };
 }
 
+/** APIが返したエラー本文から、人間が読むべき一文だけを取り出す。 */
+function apiMessage(err) {
+  return err?.error?.error?.message || err?.message || "";
+}
+
 /** SDK の型付き例外を HTTP ステータス + 日本語メッセージに落とす。 */
 export function toHttpError(err) {
   if (err instanceof AuthenticationError) {
@@ -97,13 +102,22 @@ export function toHttpError(err) {
     return { status: 429, message: "APIのレート制限に達しました。少し待ってから再試行してください。" };
   }
   if (err instanceof BadRequestError) {
-    return { status: 400, message: `リクエストがAPIに拒否されました: ${err.message}` };
+    const detail = apiMessage(err);
+    // クレジット残高不足は 400 で返るが、原因も対処も他の 400 とはまったく別物なので分けて案内する
+    if (/credit balance/i.test(detail)) {
+      return {
+        status: 402,
+        message:
+          "Anthropic APIのクレジット残高が不足しています。https://console.anthropic.com/settings/billing でクレジットを購入してください（Claude Pro/Maxのサブスクリプションとは別会計です）。",
+      };
+    }
+    return { status: 400, message: `リクエストがAPIに拒否されました: ${detail}` };
   }
   if (err instanceof APIConnectionError) {
     return { status: 502, message: "Anthropic APIに接続できませんでした。ネットワークを確認してください。" };
   }
   if (err instanceof APIError) {
-    return { status: err.status ?? 502, message: `APIエラー (${err.status}): ${err.message}` };
+    return { status: err.status ?? 502, message: `APIエラー (${err.status}): ${apiMessage(err)}` };
   }
   return { status: err.status ?? 500, message: err.message || "サーバ内部エラーが発生しました。" };
 }
