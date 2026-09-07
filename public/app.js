@@ -39,7 +39,11 @@ async function postJSON(url, body) {
   return data;
 }
 
-/** {{key}} をハイライト付きで描画する。textContent 経由なので XSS の心配がない。 */
+/**
+ * {{key}} をハイライト付きで描画する。textContent 経由なので XSS の心配がない。
+ * 中括弧は落とさずそのまま描く。画面から範囲選択でコピーしたときに
+ * 変数が地の文と区別できなくなるのを防ぐため。
+ */
 function renderTemplateText(container, text) {
   container.textContent = "";
   const re = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
@@ -49,7 +53,7 @@ function renderTemplateText(container, text) {
     if (m.index > last) container.append(text.slice(last, m.index));
     const span = document.createElement("span");
     span.className = "var-token";
-    span.textContent = m[1];
+    span.textContent = `{{${m[1]}}}`;
     span.title = `変数: ${m[1]}`;
     container.append(span);
     last = m.index + m[0].length;
