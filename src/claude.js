@@ -58,6 +58,43 @@ function usageOf(message) {
   };
 }
 
+const PLACEHOLDER_RE = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+
+/**
+ * 変数表とテンプレ本文のずれを検出して補正する。
+ * スキーマは各フィールドの型しか保証しないため、
+ * 「variables にあるのに本文に出てこない」といった不整合は通ってしまう。
+ * 黙って直すと利用者が気付けないので、必ず observations に記録する。
+ */
+export function reconcileTemplate(template) {
+  const usedKeys = new Set(
+    [...String(template.templateText ?? "").matchAll(PLACEHOLDER_RE)].map((m) => m[1])
+  );
+  const declared = Array.isArray(template.variables) ? template.variables : [];
+  const declaredKeys = new Set(declared.map((v) => v.key));
+
+  const orphaned = declared.filter((v) => !usedKeys.has(v.key));
+  const undeclared = [...usedKeys].filter((k) => !declaredKeys.has(k));
+
+  const notes = [...(template.observations ?? [])];
+  if (orphaned.length) {
+    notes.push(
+      `テンプレ本文に出現しない変数を一覧から除外しました: ${orphaned.map((v) => `{{${v.key}}}`).join(", ")}`
+    );
+  }
+  if (undeclared.length) {
+    notes.push(
+      `本文にあるが説明のない変数があります: ${undeclared.map((k) => `{{${k}}}`).join(", ")}`
+    );
+  }
+
+  return {
+    ...template,
+    variables: declared.filter((v) => usedKeys.has(v.key)),
+    observations: notes,
+  };
+}
+
 /** 複数サンプルから共通構造を抽出してテンプレ化する。 */
 export async function extractTemplate({ samples, hint }) {
   const message = await getClient().messages.parse({
@@ -69,7 +106,10 @@ export async function extractTemplate({ samples, hint }) {
     output_config: { format: zodOutputFormat(TemplateSchema) },
   });
 
-  return { template: requireParsed(message, "テンプレ抽出"), usage: usageOf(message) };
+  return {
+    template: reconcileTemplate(requireParsed(message, "テンプレ抽出")),
+    usage: usageOf(message),
+  };
 }
 
 /** 確定したテンプレに沿って新しい問い合わせへの下書きを作る。 */
