@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reply Template Builder — 回答文テンプレ生成</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap">
+        <h1>Reply Template Builder</h1>
+        <p class="tagline">
+          過去の回答文から<strong>共通構造</strong>を抽出してテンプレ化し、新しい問い合わせへの下書きを生成します。
+        </p>
+        <p class="status" id="status" aria-live="polite"></p>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <!-- STEP 1 -->
+      <section class="card" id="step1">
+        <div class="card-head">
+          <span class="step">STEP 1</span>
+          <h2>過去の回答文を貼り付ける</h2>
+          <div class="card-actions">
+            <button type="button" class="ghost" id="load-demo">サンプルを投入</button>
+            <button type="button" class="ghost" id="add-sample">＋ サンプルを追加</button>
+          </div>
+        </div>
+        <p class="hint">
+          同じ種類の問い合わせに対する回答を <strong>2〜5件</strong> 入れてください。件数が多いほど「定型部分」と「可変部分」の切り分けが正確になります。
+        </p>
+
+        <div id="samples"></div>
+
+        <label class="field">
+          <span class="field-label">補足指示（任意）</span>
+          <input type="text" id="hint" placeholder="例: 署名は毎回同じなので定型扱いにしてください" />
+        </label>
+
+        <div class="card-foot">
+          <button type="button" class="primary" id="extract">共通構造を抽出してテンプレ化</button>
+          <span class="inline-note" id="extract-note"></span>
+        </div>
+      </section>
+
+      <!-- STEP 2 -->
+      <section class="card is-locked" id="step2" aria-disabled="true">
+        <div class="card-head">
+          <span class="step">STEP 2</span>
+          <h2>抽出されたテンプレ</h2>
+          <div class="card-actions">
+            <button type="button" class="ghost" id="copy-template" hidden>テンプレをコピー</button>
+          </div>
+        </div>
+
+        <div class="empty" id="step2-empty">STEP 1 を実行すると、ここに抽出結果が表示されます。</div>
+
+        <div id="template-view" hidden>
+          <div class="template-meta">
+            <h3 id="tpl-name"></h3>
+            <p id="tpl-summary"></p>
+          </div>
+
+          <div class="legend">
+            <span class="chip chip-fixed">定型</span>
+            <span class="chip chip-variable">可変</span>
+            <span class="chip chip-conditional">条件付き</span>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h4>テンプレ全文</h4>
+              <pre class="template-text" id="tpl-text"></pre>
+            </div>
+            <div>
+              <h4>ブロック構造</h4>
+              <ul class="blocks" id="tpl-blocks"></ul>
+            </div>
+          </div>
+
+          <h4>可変部分（変数）</h4>
+          <table class="vars">
+            <thead>
+              <tr><th>変数</th><th>意味</th><th>値の入手元</th><th>例</th></tr>
+            </thead>
+            <tbody id="tpl-vars"></tbody>
+          </table>
+
+          <details class="detail">
+            <summary>文体ルール / 抽出時のメモ</summary>
+            <h5>文体ルール</h5>
+            <ul id="tpl-style"></ul>
+            <h5>メモ</h5>
+            <ul id="tpl-notes"></ul>
+          </details>
+        </div>
+      </section>
+
+      <!-- STEP 3 -->
+      <section class="card is-locked" id="step3" aria-disabled="true">
+        <div class="card-head">
+          <span class="step">STEP 3</span>
+          <h2>新しい問い合わせから下書きを生成</h2>
+          <div class="card-actions">
+            <button type="button" class="ghost" id="copy-draft" hidden>下書きをコピー</button>
+          </div>
+        </div>
+
+        <label class="field">
+          <span class="field-label">新しい問い合わせ内容</span>
+          <textarea id="new-inquiry" rows="6" placeholder="届いた問い合わせメールを貼り付けてください"></textarea>
+        </label>
+
+        <label class="field">
+          <span class="field-label">追加で分かっている事実（任意）</span>
+          <input type="text" id="new-note" placeholder="例: 切り替えは翌月1日付け、手数料は不要" />
+        </label>
+
+        <div class="card-foot">
+          <button type="button" class="primary" id="generate" disabled>下書きを生成</button>
+          <span class="inline-note" id="generate-note"></span>
+        </div>
+
+        <div id="draft-view" hidden>
+          <div class="draft-subject">
+            <span class="field-label">件名案</span>
+            <p id="draft-subject"></p>
+          </div>
+          <pre class="draft-body" id="draft-body"></pre>
+
+          <div id="missing-box" class="alert" hidden>
+            <h4>送信前に確認が必要な項目</h4>
+            <ul id="draft-missing"></ul>
+          </div>
+
+          <details class="detail">
+            <summary>どこをどう埋めたか / 送信前チェック</summary>
+            <table class="vars">
+              <thead>
+                <tr><th>変数</th><th>埋めた値</th><th>確度</th><th>根拠</th></tr>
+              </thead>
+              <tbody id="draft-filled"></tbody>
+            </table>
+            <h5>送信前チェック</h5>
+            <ul id="draft-checklist"></ul>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer class="wrap site-footer">
+      <p>Powered by Claude (Anthropic) · Structured Outputs で JSON を直接受け取っています。</p>
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

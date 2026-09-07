@@ -1,0 +1,27 @@
+{
+  "name": "reply-template-builder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "過去の回答文サンプルから共通構造を抽出してテンプレ化し、新しい問い合わせへの回答下書きを生成するWebアプリ",
+  "type": "module",
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [
+    "claude",
+    "anthropic",
+    "template",
+    "email",
+    "llm"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
+    "express": "^5.2.1",
+    "zod": "^4.5.4"
+  }
+}
